@@ -1,0 +1,181 @@
+<!DOCTYPE html><html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MyTV+ INFO</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Noto+Sans:wght@400;500;700;900&display=swap">
+  <style>
+    body {
+      font-family: 'Manrope', 'Noto Sans', sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-[#111418] text-white min-h-screen flex flex-col">
+  <header class="border-b border-[#293038] px-6 py-4 flex justify-between items-center">
+    <div class="flex items-center gap-3">
+      <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path d="M6 6H42L36 24L42 42H6L12 24L6 6Z"></path></svg>
+      <h1 class="text-lg font-bold">MyTV+ INFO</h1>
+    </div>
+  </header>
+
+  <main class="flex-1 px-6 py-6 max-w-screen-xl mx-auto">
+    <section class="mb-8 bg-[#1c2126] p-6 rounded-xl">
+      <h2 class="text-2xl font-bold mb-6">➕ إضافة سجل جديد</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <input id="inputId" type="text" placeholder="المعرف" class="bg-[#293038] p-3 rounded-lg w-full focus:outline-none">
+        <input id="inputKey" type="text" placeholder="المفتاح" class="bg-[#293038] p-3 rounded-lg w-full focus:outline-none">
+        <input id="inputDate" type="date" class="bg-[#293038] p-3 rounded-lg w-full focus:outline-none">
+        <input id="inputUser" type="text" placeholder="المستخدم" class="bg-[#293038] p-3 rounded-lg w-full focus:outline-none">
+      </div>
+      <div class="flex items-center mt-4 gap-2">
+        <input id="inputOffline" type="checkbox" class="form-checkbox bg-[#293038] border-[#555]">
+        <label for="inputOffline">السماح بدون اتصال</label>
+      </div>
+      <button onclick="addRow()" class="mt-4 bg-[#1672ce] text-white font-bold px-6 py-2 rounded-lg hover:bg-[#1a7edc]">إضافة</button>
+    </section>
+
+    <section class="mb-4">
+      <input id="searchInput" oninput="renderTable()" type="text" placeholder="🔍 ابحث..." class="bg-[#293038] p-3 rounded-lg w-full max-w-md focus:outline-none">
+    </section>
+
+    <section class="bg-[#1c2126] p-4 rounded-xl">
+      <div class="overflow-x-auto">
+        <table class="w-full table-auto border-collapse">
+          <thead>
+            <tr class="bg-[#293038]">
+              <th class="p-3 text-right">المعرف</th>
+              <th class="p-3 text-right">المفتاح</th>
+              <th class="p-3 text-right">تاريخ الانتهاء</th>
+              <th class="p-3 text-right">المستخدم</th>
+              <th class="p-3 text-right">بدون اتصال</th>
+              <th class="p-3 text-right">تحكم</th>
+            </tr>
+          </thead>
+          <tbody id="dataTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="mt-6 flex flex-wrap gap-2">
+      <button onclick="copyJSON()" class="bg-[#293038] px-4 py-2 rounded-lg hover:bg-[#323a44]">📋 نسخ JSON</button>
+      <button onclick="exportJSON()" class="bg-[#293038] px-4 py-2 rounded-lg hover:bg-[#323a44]">⬇️ تصدير</button>
+      <label class="bg-[#293038] px-4 py-2 rounded-lg hover:bg-[#323a44] cursor-pointer">
+        📤 استيراد
+        <input type="file" hidden accept=".json" onchange="importJSON(event)">
+      </label>
+    </section>
+
+    <section class="mt-6">
+      <h2 class="mb-2 text-lg font-semibold">📄 عرض JSON</h2>
+      <textarea id="jsonOutput" class="bg-[#293038] p-4 w-full rounded-lg min-h-[200px] text-white font-mono resize-y" readonly></textarea>
+    </section>
+  </main>
+
+  <script>
+    const STORAGE_KEY = 'jsonDataList';
+    let data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    const searchInput = document.getElementById('searchInput');
+    const table = document.getElementById('dataTable');
+    const output = document.getElementById('jsonOutput');
+
+    function renderTable() {
+      table.innerHTML = '';
+      const search = searchInput.value.toLowerCase();
+
+      
+      data.sort((a, b) => new Date(b.expiresAt) - new Date(a.expiresAt));
+
+      data.forEach((item, index) => {
+        const values = [item.id, item.key, item.expiresAt, item.user];
+        if (!values.some(v => v.toLowerCase().includes(search))) return;
+        const row = document.createElement('tr');
+        row.className = 'border-t border-[#333]';
+        row.innerHTML = `
+          <td class="p-2"><input type="text" class="bg-[#293038] p-2 rounded w-full" value="${item.id}" onchange="updateField(${index}, 'id', this.value)"></td>
+          <td class="p-2"><input type="text" class="bg-[#293038] p-2 rounded w-full" value="${item.key}" onchange="updateField(${index}, 'key', this.value)"></td>
+          <td class="p-2"><input type="date" class="bg-[#293038] p-2 rounded w-full" value="${item.expiresAt}" onchange="updateField(${index}, 'expiresAt', this.value)"></td>
+          <td class="p-2"><input type="text" class="bg-[#293038] p-2 rounded w-full" value="${item.user}" onchange="updateField(${index}, 'user', this.value)"></td>
+          <td class="p-2 text-center"><input type="checkbox" ${item.allowOffline ? 'checked' : ''} onchange="updateField(${index}, 'allowOffline', this.checked)"></td>
+          <td class="p-2 text-center"><button class="bg-red-600 px-3 py-1 rounded hover:bg-red-700" onclick="deleteRow(${index})">🗑️</button></td>
+        `;
+        table.appendChild(row);
+      });
+      output.value = JSON.stringify(data, null, 2);
+    }
+
+    function updateField(index, field, value) {
+      data[index][field] = value;
+      saveData();
+    }
+
+    function addRow() {
+      const newItem = {
+        id: document.getElementById('inputId').value.trim(),
+        key: document.getElementById('inputKey').value.trim(),
+        expiresAt: document.getElementById('inputDate').value,
+        user: document.getElementById('inputUser').value.trim(),
+        allowOffline: document.getElementById('inputOffline').checked
+      };
+      if (!newItem.id || !newItem.key) return alert('يرجى إدخال المعرف والمفتاح على الأقل.');
+      data.push(newItem);
+      clearInputs();
+      saveData();
+    }
+
+    function clearInputs() {
+      document.getElementById('inputId').value = '';
+      document.getElementById('inputKey').value = '';
+      document.getElementById('inputDate').value = '';
+      document.getElementById('inputUser').value = '';
+      document.getElementById('inputOffline').checked = false;
+    }
+
+    function deleteRow(index) {
+      if (confirm('هل تريد حذف هذا السجل؟')) {
+        data.splice(index, 1);
+        saveData();
+      }
+    }
+
+    function saveData() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      renderTable();
+    }
+
+    function copyJSON() {
+      navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+      alert('✅ تم نسخ البيانات!');
+    }
+
+    function exportJSON() {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'data.json';
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importJSON(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          data = JSON.parse(e.target.result);
+          saveData();
+          alert('✅ تم استيراد البيانات!');
+        } catch (err) {
+          alert('❌ ملف JSON غير صالح!');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    renderTable();
+  </script>
+</body>
+</html>
